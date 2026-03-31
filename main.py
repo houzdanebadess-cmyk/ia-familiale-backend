@@ -5,7 +5,6 @@ import os
 import httpx
 from typing import Optional
 import uuid
-import json
 
 app = FastAPI()
 
@@ -18,11 +17,8 @@ app.add_middleware(
 )
 
 # Récupérer les variables d'environnement
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
-# Modèle pour les messages
 class Message(BaseModel):
     user_id: str
     content: str
@@ -35,8 +31,12 @@ def root():
 @app.post("/chat")
 async def chat(message: Message):
     try:
-        # 1. Appeler OpenRouter
-        async with httpx.AsyncClient() as client:
+        # Vérifier que la clé existe
+        if not OPENROUTER_API_KEY:
+            return {"response": "Erreur: Clé API OpenRouter manquante", "conversation_id": message.conversation_id}
+        
+        # Préparer la requête pour OpenRouter
+        async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
                 "https://openrouter.ai/api/v1/chat/completions",
                 headers={
@@ -44,36 +44,43 @@ async def chat(message: Message):
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "nousresearch/hermes-3-llama-3.1-8b:free",
-                    "messages": [{"role": "user", "content": message.content}],
-                    "max_tokens": 500
-                },
-                timeout=60.0
+                    "model": "mistralai/mistral-7b-instruct:free",
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": message.content
+                        }
+                    ]
+                }
             )
             
+            # Vérifier la réponse
             if response.status_code != 200:
-                return {"response": f"Erreur IA: {response.status_code}", "conversation_id": message.conversation_id}
+                return {
+                    "response": f"Erreur OpenRouter ({response.status_code}): {response.text[:200]}", 
+                    "conversation_id": message.conversation_id
+                }
             
             result = response.json()
             ai_response = result["choices"][0]["message"]["content"]
-        
-        # 2. Retourner la réponse
-        return {
-            "response": ai_response,
-            "conversation_id": message.conversation_id or str(uuid.uuid4())
-        }
-        
+            
+            return {
+                "response": ai_response,
+                "conversation_id": message.conversation_id or str(uuid.uuid4())
+            }
+            
     except Exception as e:
-        return {"response": f"Erreur: {str(e)}", "conversation_id": message.conversation_id}
+        return {
+            "response": f"Erreur: {str(e)}", 
+            "conversation_id": message.conversation_id
+        }
 
 @app.get("/conversations/{user_id}")
 async def get_conversations(user_id: str):
-    # Version simplifiée pour le moment
     return []
 
 @app.get("/messages/{conversation_id}")
 async def get_messages(conversation_id: str):
-    # Version simplifiée pour le moment
     return []
 
 @app.post("/register")
