@@ -44,7 +44,7 @@ async def chat(message: Message):
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "mistralai/mistral-7b-instruct:free",
+                    "model": "google/gemini-2.0-flash-lite-preview-02-05:free",
                     "messages": [
                         {
                             "role": "user",
