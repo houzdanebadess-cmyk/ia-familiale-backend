@@ -8,7 +8,6 @@ import uuid
 
 app = FastAPI()
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -16,7 +15,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 class Message(BaseModel):
     user_id: str
@@ -30,33 +29,27 @@ def root():
 @app.post("/chat")
 async def chat(message: Message):
     try:
-        if not DEEPSEEK_API_KEY:
-            return {"response": "Erreur: Clé API DeepSeek manquante", "conversation_id": message.conversation_id}
-        
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
-                "https://api.deepseek.com/v1/chat/completions",
+                "https://openrouter.ai/api/v1/chat/completions",
                 headers={
-                    "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "deepseek-chat",
-                    "messages": [
-                        {"role": "user", "content": message.content}
-                    ]
+                    "model": "microsoft/phi-3.5-mini-instruct:free",
+                    "messages": [{"role": "user", "content": message.content}]
                 }
             )
             
             if response.status_code != 200:
                 return {
-                    "response": f"Erreur DeepSeek: {response.status_code} - {response.text[:200]}", 
+                    "response": f"Erreur API: {response.status_code}", 
                     "conversation_id": message.conversation_id
                 }
             
             result = response.json()
             ai_response = result["choices"][0]["message"]["content"]
-            
             return {
                 "response": ai_response,
                 "conversation_id": message.conversation_id or str(uuid.uuid4())
