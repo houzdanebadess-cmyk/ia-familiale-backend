@@ -44,7 +44,7 @@ async def chat(message: Message):
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "qwen/qwen-2.5-7b-instruct:free",
+                    "model": "xiaomi/mimo-v2-flash:free",
                     "messages": [
                         {
                             "role": "user",
