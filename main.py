@@ -15,7 +15,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+HF_API_KEY = os.getenv("HF_API_KEY")
 
 class Message(BaseModel):
     user_id: str
@@ -31,25 +31,26 @@ async def chat(message: Message):
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
-                "https://openrouter.ai/api/v1/chat/completions",
+                "https://api-inference.huggingface.co/models/microsoft/Phi-3.5-mini-instruct",
                 headers={
-                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "Authorization": f"Bearer {HF_API_KEY}",
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "microsoft/phi-3.5-mini-instruct:free",
-                    "messages": [{"role": "user", "content": message.content}]
+                    "inputs": f"<|user|>\n{message.content}\n<|assistant|>\n",
+                    "parameters": {"max_new_tokens": 500}
                 }
             )
             
             if response.status_code != 200:
                 return {
-                    "response": f"Erreur API: {response.status_code}", 
+                    "response": f"Erreur: {response.status_code}", 
                     "conversation_id": message.conversation_id
                 }
             
             result = response.json()
-            ai_response = result["choices"][0]["message"]["content"]
+            ai_response = result[0]["generated_text"].split("<|assistant|>\n")[-1].strip()
+            
             return {
                 "response": ai_response,
                 "conversation_id": message.conversation_id or str(uuid.uuid4())
