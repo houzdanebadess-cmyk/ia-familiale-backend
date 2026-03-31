@@ -44,7 +44,7 @@ async def chat(message: Message):
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "meta-llama/llama-3.2-3b-instruct:free",
+                    "model": "qwen/qwen-2.5-7b-instruct:free",
                     "messages": [
                         {
                             "role": "user",
