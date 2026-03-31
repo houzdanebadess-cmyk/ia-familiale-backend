@@ -44,7 +44,7 @@ async def chat(message: Message):
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "google/gemini-2.0-flash-lite-preview-02-05:free",
+                    "model": "nousresearch/hermes-3-llama-3.1-8b:free",
                     "messages": [
                         {
                             "role": "user",
