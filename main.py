@@ -44,7 +44,7 @@ async def chat(message: Message):
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "nousresearch/hermes-3-llama-3.1-8b:free",
+                    "model": "meta-llama/llama-3.2-3b-instruct:free",
                     "messages": [
                         {
                             "role": "user",
