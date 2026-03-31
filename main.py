@@ -16,7 +16,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 
 class Message(BaseModel):
     user_id: str
@@ -30,27 +30,32 @@ def root():
 @app.post("/chat")
 async def chat(message: Message):
     try:
-        if not GEMINI_API_KEY:
-            return {"response": "Erreur: Clé API Gemini manquante", "conversation_id": message.conversation_id}
+        if not DEEPSEEK_API_KEY:
+            return {"response": "Erreur: Clé API DeepSeek manquante", "conversation_id": message.conversation_id}
         
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}",
+                "https://api.deepseek.com/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+                    "Content-Type": "application/json"
+                },
                 json={
-                    "contents": [{
-                        "parts": [{"text": message.content}]
-                    }]
+                    "model": "deepseek-chat",
+                    "messages": [
+                        {"role": "user", "content": message.content}
+                    ]
                 }
             )
             
             if response.status_code != 200:
                 return {
-                    "response": f"Erreur Gemini: {response.status_code}", 
+                    "response": f"Erreur DeepSeek: {response.status_code} - {response.text[:200]}", 
                     "conversation_id": message.conversation_id
                 }
             
             result = response.json()
-            ai_response = result["candidates"][0]["content"]["parts"][0]["text"]
+            ai_response = result["choices"][0]["message"]["content"]
             
             return {
                 "response": ai_response,
