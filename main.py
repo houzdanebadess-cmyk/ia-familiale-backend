@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
@@ -16,8 +16,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Récupérer les variables d'environnement
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 class Message(BaseModel):
     user_id: str
@@ -31,38 +30,27 @@ def root():
 @app.post("/chat")
 async def chat(message: Message):
     try:
-        # Vérifier que la clé existe
-        if not OPENROUTER_API_KEY:
-            return {"response": "Erreur: Clé API OpenRouter manquante", "conversation_id": message.conversation_id}
+        if not GEMINI_API_KEY:
+            return {"response": "Erreur: Clé API Gemini manquante", "conversation_id": message.conversation_id}
         
-        # Préparer la requête pour OpenRouter
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
-                "https://openrouter.ai/api/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                    "Content-Type": "application/json"
-                },
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key={GEMINI_API_KEY}",
                 json={
-                    "model": "xiaomi/mimo-v2-flash:free",
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": message.content
-                        }
-                    ]
+                    "contents": [{
+                        "parts": [{"text": message.content}]
+                    }]
                 }
             )
             
-            # Vérifier la réponse
             if response.status_code != 200:
                 return {
-                    "response": f"Erreur OpenRouter ({response.status_code}): {response.text[:200]}", 
+                    "response": f"Erreur Gemini: {response.status_code}", 
                     "conversation_id": message.conversation_id
                 }
             
             result = response.json()
-            ai_response = result["choices"][0]["message"]["content"]
+            ai_response = result["candidates"][0]["content"]["parts"][0]["text"]
             
             return {
                 "response": ai_response,
